@@ -24,6 +24,8 @@ Corporate tax non-compliance poses a significant threat to Zimbabwe's fiscal sus
 
 This repository contains the research prototype: exploratory analysis, feature engineering, and a production-grade hybrid ML pipeline.
 
+📄 **[Full Research Summary Report](TAXGUARD_RESEARCH_SUMMARY.md)** — Complete findings, graphs, ZIMRA policy implications, and national development alignment.
+
 ---
 
 ## Problem Statement
@@ -214,5 +216,5 @@ This research prototype is provided for academic and demonstration purposes. Con
 
 | Author | Contact |
 |--------|---------|
-| Edith Muyambiri | 078685719 |
-| Andile Bhebhe | 0777303324 |
+| Edith Muyambiri 
+| Andile Bhebhe 
