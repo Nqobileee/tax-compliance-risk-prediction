@@ -1,0 +1,132 @@
+{
+  "dataset": {
+    "records": 1900,
+    "features_raw": 15,
+    "features_engineered": 29,
+    "missing_values": 0,
+    "duplicate_ids": 0
+  },
+  "targets": {
+    "risk_label_distribution": {
+      "Low": 634,
+      "High": 634,
+      "Medium": 632
+    },
+    "audit_outcome_distribution": {
+      "Clean": 1319,
+      "Qualified": 479,
+      "Adverse": 102
+    },
+    "high_risk_rate": 0.3336842105263158,
+    "non_compliant_rate": 0.3057894736842105
+  },
+  "top_univariate_auc": {
+    "AUC_High_Risk": {
+      "Tax_Rate_Deviation": 0.9165,
+      "Statutory_Effective_Gap": 0.9165,
+      "Planning_Deviation_Interaction": 0.8661,
+      "Effective_Tax_Rate": 0.2158,
+      "Tax_Underpayment_Ratio": 0.78,
+      "ETR_to_STR_Ratio": 0.22,
+      "Tax_Gap_Million": 0.7453,
+      "Implied_Tax_Liability_Million": 0.2687,
+      "Audit_Planning_Synergy": 0.7105,
+      "Audit_Likelihood": 0.6965
+    },
+    "AUC_Non_Compliant": {
+      "Tax_Rate_Deviation": 0.4975,
+      "Statutory_Effective_Gap": 0.4975,
+      "Planning_Deviation_Interaction": 0.5195,
+      "Effective_Tax_Rate": 0.5156,
+      "Tax_Underpayment_Ratio": 0.4844,
+      "ETR_to_STR_Ratio": 0.5156,
+      "Tax_Gap_Million": 0.4832,
+      "Implied_Tax_Liability_Million": 0.5061,
+      "Audit_Planning_Synergy": 0.508,
+      "Audit_Likelihood": 0.4802
+    },
+    "distance": {
+      "Tax_Rate_Deviation": 0.4165,
+      "Statutory_Effective_Gap": 0.4165,
+      "Planning_Deviation_Interaction": 0.3661,
+      "Effective_Tax_Rate": 0.2842,
+      "Tax_Underpayment_Ratio": 0.28,
+      "ETR_to_STR_Ratio": 0.28,
+      "Tax_Gap_Million": 0.2453,
+      "Implied_Tax_Liability_Million": 0.2313,
+      "Audit_Planning_Synergy": 0.2105,
+      "Audit_Likelihood": 0.1965
+    }
+  },
+  "chi_square": {
+    "statistic": 6.1251118928792945,
+    "p_value": 0.18999764009577885,
+    "df": 4
+  },
+  "risk_outcome_crosstab_pct": {
+    "Adverse": {
+      "High": 6.2,
+      "Low": 5.0,
+      "Medium": 4.9
+    },
+    "Clean": {
+      "High": 68.0,
+      "Low": 67.5,
+      "Medium": 72.8
+    },
+    "Qualified": {
+      "High": 25.9,
+      "Low": 27.4,
+      "Medium": 22.3
+    }
+  },
+  "zimra_overlooked_indicators": [
+    {
+      "indicator": "Low profit margin + High revenue",
+      "flagged_firms": 180,
+      "high_risk_rate": 0.328,
+      "baseline_rate": 0.334,
+      "risk_uplift_x": 0.98
+    },
+    {
+      "indicator": "High offshore + Weak controls",
+      "flagged_firms": 196,
+      "high_risk_rate": 0.383,
+      "baseline_rate": 0.334,
+      "risk_uplift_x": 1.15
+    },
+    {
+      "indicator": "Top-decile tax deviation + Zero fines",
+      "flagged_firms": 116,
+      "high_risk_rate": 0.914,
+      "baseline_rate": 0.334,
+      "risk_uplift_x": 2.74
+    },
+    {
+      "indicator": "High planning score + Clean audit history",
+      "flagged_firms": 368,
+      "high_risk_rate": 0.467,
+      "baseline_rate": 0.334,
+      "risk_uplift_x": 1.4
+    },
+    {
+      "indicator": "Concentrated ownership + \u22653 offshore subsidiaries",
+      "flagged_firms": 99,
+      "high_risk_rate": 0.354,
+      "baseline_rate": 0.334,
+      "risk_uplift_x": 1.06
+    }
+  ],
+  "model_oof": {
+    "isolation_forest_auc": 0.3157,
+    "autoencoder_auc": 0.424,
+    "hist_gradient_boosting_auc": 0.9964,
+    "ensemble_roc_auc": 0.9948,
+    "ensemble_pr_auc": 0.992,
+    "ensemble_brier": 0.0244,
+    "ensemble_f1_optimal": 0.9576,
+    "optimal_threshold": 0.7811,
+    "audit_likelihood_auc_baseline": 0.6965,
+    "non_compliance_ensemble_auc": 0.5091
+  }
+}

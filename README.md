@@ -6,7 +6,7 @@
 
 > **TaxGuard** — An AI-Based Anomaly Detection Framework for Corporate Tax Return Risk Scoring at ZIMRA
 
-**Authors:** Edith Muyambiri (078685719) & Andile Bhebhe (0777303324)  
+**Authors:** Edith Muyambiri & Andile Bhebhe   
 **Research Theme:** Area 1 — Data, Automation and Intelligent Systems in the 4IR Era
 
 ---
