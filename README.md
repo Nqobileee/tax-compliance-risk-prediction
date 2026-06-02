@@ -26,6 +26,18 @@ This repository contains the research prototype: exploratory analysis, feature e
 
 📄 **[Full Research Summary Report](TAXGUARD_RESEARCH_SUMMARY.md)** — Complete findings, graphs, ZIMRA policy implications, and national development alignment.
 
+### Web Demo
+
+Interactive product demonstration built with React + TypeScript:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` — Home, filing assessment form, risk results with charts, and system statistics.
+
 ---
 
 ## Problem Statement
