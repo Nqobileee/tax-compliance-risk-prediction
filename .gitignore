@@ -5,3 +5,5 @@ __pycache__/
 outputs/figures/
 outputs/models/
 .DS_Store
+web/node_modules/
+web/dist/

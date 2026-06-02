@@ -145,9 +145,11 @@ export function Stats() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis
                   dataKey="feature"
-                  tick={{ fontSize: 9, angle: -35, textAnchor: "end" }}
+                  tick={{ fontSize: 9 }}
                   interval={0}
-                  height={70}
+                  height={80}
+                  angle={-35}
+                  textAnchor="end"
                 />
                 <YAxis domain={[0, 1]} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number) => [v.toFixed(4), "AUC-ROC"]} />
