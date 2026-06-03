@@ -86,13 +86,14 @@ tax-compliance-risk-prediction/
 ├── corporate_tax_risk_dataset.csv   # 1,900 corporate tax filings
 ├── notebooks/
 │   ├── 01_taxguard_eda.ipynb        # Research-grade exploratory analysis
-│   └── 02_taxguard_hybrid_model.ipynb  # Hybrid ML pipeline
+│   ├── 02_taxguard_hybrid_model.ipynb  # Hybrid ML pipeline
+│   └── figures/                     # Saved plots (18 numbered PNGs)
 ├── src/
 │   └── taxguard_features.py         # Shared feature engineering
 ├── scripts/
-│   └── build_notebooks.py           # Notebook generator
+│   ├── build_notebooks.py           # Notebook generator
+│   └── generate_report_assets.py    # Regenerate figures & metrics
 ├── outputs/
-│   ├── figures/                     # Generated plots (after running notebooks)
 │   └── models/                      # Saved model artefacts
 ├── requirements.txt
 └── README.md
@@ -168,6 +169,42 @@ Model artefacts are saved to `outputs/models/taxguard_ensemble.pkl`.
 4. **Risk labels correlate significantly** with audit outcomes — supporting supervised retraining on completed audits.
 5. Firms with **clean audit history but high planning scores** remain elevated risk — a pattern manual selection often misses.
 
+### Selected visual evidence
+
+Run the EDA notebook or `python scripts/generate_report_assets.py` to refresh plots under `notebooks/figures/`. Full figure catalogue: [notebooks/figures/README.md](notebooks/figures/README.md).
+
+#### Balanced targets and audit yield potential
+
+![Target distributions](notebooks/figures/01_target_distributions.png)
+
+Risk tiers are evenly split (~33% each); **30.6%** of filings end Qualified or Adverse, so better prioritisation has direct audit-yield upside. ZIMRA’s `Audit_Likelihood` score is dispersed but, alone, is a weaker ranker than engineered tax-gap features.
+
+#### Tax rate deviation dominates manual heuristics
+
+![Univariate AUC ranking](notebooks/figures/05_univariate_auc_ranking.png)
+
+**Tax rate deviation** (AUC ≈ 0.92) and **planning × deviation** interactions rank far above revenue-scale variables. Manual selection that overweight turnover misses the strongest statutory-vs-effective gap signal.
+
+#### Composite cohorts manual review overlooks
+
+![Overlooked indicators](notebooks/figures/08_zimra_overlooked_indicators.png)
+
+Firms in the **top decile of tax deviation with zero fine history** show ~**91%** high-risk rate (**2.7×** baseline) — often skipped because they lack enforcement history. **High planning + clean audit history** still shows ~**47%** high-risk (**1.4×** baseline), exposing recency bias in manual queues.
+
+#### Hybrid ensemble vs ZIMRA baseline
+
+![Model ROC and PR](notebooks/figures/11_model_roc_pr_comparison.png)
+
+The stacked TaxGuard ensemble reaches **ROC-AUC ≈ 0.99** and **PR-AUC ≈ 0.99** out-of-fold, vs **~0.70** for `Audit_Likelihood` — a ~43% relative gain in ranking quality for the same filing volume.
+
+#### Auditor-facing explanations
+
+![SHAP summary](notebooks/figures/14_shap_summary.png)
+
+SHAP attributions align with policy priorities (rate gaps, offshore intensity, planning composites), supporting explainable integration into AMS workflows.
+
+See [TAXGUARD_RESEARCH_SUMMARY.md](TAXGUARD_RESEARCH_SUMMARY.md) for all 18 figures and ZIMRA deployment recommendations.
+
 ---
 
 ## Model Performance
@@ -224,9 +261,6 @@ This research prototype is provided for academic and demonstration purposes. Con
 
 ---
 
-## Contact
+## Authors
 
-| Author | Contact |
-|--------|---------|
-| Edith Muyambiri 
-| Andile Bhebhe 
+Edith Muyambiri & Andile Bhebhe — contact via your institution or repository maintainer for deployment and licensing enquiries.

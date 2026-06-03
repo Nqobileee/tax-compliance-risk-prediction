@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Authors** | Edith Muyambiri (078685719) & Andile Bhebhe (0777303324) |
+| **Authors** | Edith Muyambiri & Andile Bhebhe |
 | **Theme** | Area 1 — Data, Automation and Intelligent Systems in the 4IR Era |
 | **Category** | Prototype Demonstration |
 | **Institution Context** | Zimbabwe Revenue Authority (ZIMRA) |
@@ -161,7 +161,7 @@ TaxGuard monitors indicators aligned with international tax audit best practice:
 | `notebooks/02_taxguard_hybrid_model.ipynb` | Full hybrid ML training & evaluation pipeline |
 | `src/taxguard_features.py` | Shared domain feature engineering |
 | `corporate_tax_risk_dataset.csv` | 1,900 corporate tax filing records |
-| `outputs/figures/` | Generated visualisations (referenced below) |
+| `notebooks/figures/` | EDA and model visualisations (18 numbered PNGs; see Sections 5–9) |
 | `outputs/models/` | Saved production model artefacts |
 
 ---
@@ -198,7 +198,7 @@ The dataset is **production-ready** for ZIMRA analytics integration:
 | Qualified | 479 | 25.2% |
 | Adverse | 102 | 5.4% |
 
-![Target Variable Distributions](outputs/figures/01_target_distributions.png)
+![Target Variable Distributions](notebooks/figures/01_target_distributions.png)
 
 *Figure 1: Distribution of tax risk labels, audit outcomes, and ZIMRA's existing audit likelihood heuristic score.*
 
@@ -211,6 +211,12 @@ The dataset is **production-ready** for ZIMRA analytics integration:
 ---
 
 ## 6. Exploratory Data Analysis Findings
+
+### 6.0 Feature Distributions by Risk Tier
+
+![Univariate Distributions by Risk Tier](notebooks/figures/02_univariate_by_risk_tier.png)
+
+*Figure 2: Marginal distributions of core filing variables stratified by Low, Medium, and High risk tiers — used to calibrate sector-normalised thresholds.*
 
 ### 6.1 Dominant Risk Signal: Tax Rate Deviation
 
@@ -226,7 +232,7 @@ The single most powerful predictor of high-risk corporate filings is **`Tax_Rate
 | **Audit_Likelihood (ZIMRA baseline)** | **0.6965** | Moderate |
 | Effective_Tax_Rate (alone) | 0.2158 | Weak (directionally misleading alone) |
 
-![Univariate AUC Ranking](outputs/figures/05_univariate_auc_ranking.png)
+![Univariate AUC Ranking](notebooks/figures/05_univariate_auc_ranking.png)
 
 *Figure 2: Top features ranked by univariate AUC-ROC for high-risk detection. Tax rate deviation dominates; ZIMRA's audit likelihood heuristic ranks lower.*
 
@@ -234,7 +240,7 @@ The single most powerful predictor of high-risk corporate filings is **`Tax_Rate
 
 ### 6.2 ROC Curves — Univariate Feature Comparison
 
-![Univariate ROC Curves](outputs/figures/06_roc_univariate_top_features.png)
+![Univariate ROC Curves](notebooks/figures/06_roc_univariate_top_features.png)
 
 *Figure 3: ROC curves comparing top univariate predictors against ZIMRA's existing audit likelihood score for high-risk (left) and non-compliance (right) detection.*
 
@@ -246,7 +252,7 @@ Key takeaways:
 
 ### 6.3 Risk Tier Separation — Key Audit Indicators
 
-![Bivariate Boxplots](outputs/figures/03_bivariate_boxplots.png)
+![Bivariate Boxplots](notebooks/figures/03_bivariate_boxplots.png)
 
 *Figure 4: Distribution of key financial indicators across Low, Medium, and High risk tiers.*
 
@@ -258,7 +264,7 @@ Visible patterns confirm:
 
 ### 6.4 Feature Correlation Structure
 
-![Correlation Matrix](outputs/figures/04_correlation_matrix.png)
+![Correlation Matrix](notebooks/figures/04_correlation_matrix.png)
 
 *Figure 5: Correlation matrix of primary TaxGuard risk indicators.*
 
@@ -270,7 +276,7 @@ Notable correlations:
 
 ### 6.5 Risk Label vs Audit Outcome Alignment
 
-![Risk-Outcome Crosstab](outputs/figures/07_risk_outcome_crosstab.png)
+![Risk-Outcome Crosstab](notebooks/figures/07_risk_outcome_crosstab.png)
 
 *Figure 6: Probability of audit outcome given risk tier — calibration diagnostic for continuous learning.*
 
@@ -282,15 +288,27 @@ Notable correlations:
 
 The chi-square test (χ² = 6.13, p = 0.19) suggests risk labels capture overlapping but not identical information to audit outcomes — confirming the value of **dual supervision**: risk tiers for queue prioritisation, audit outcomes for model retraining.
 
+### 6.6 Pairwise Feature Relationships
+
+![Pairplot Top Features](notebooks/figures/09_pairplot_top_features.png)
+
+*Figure 7: Scatter and density relationships among the strongest predictors, coloured by risk tier — confirms non-linear separation beyond univariate rules.*
+
+### 6.7 Multiclass One-vs-Rest ROC
+
+![Multiclass OvR ROC](notebooks/figures/10_multiclass_ovr_roc.png)
+
+*Figure 8: OvR ROC curves using tax rate deviation as the scoring variable across Low, Medium, and High tiers.*
+
 ---
 
 ## 7. Overlooked Risk Indicators — ZIMRA Policy Gaps
 
 A central contribution of this research is identifying **composite risk patterns** that manual audit selection systematically misses. The following cohorts were flagged using domain-informed rules and compared against the population baseline high-risk rate of **33.4%**.
 
-![Overlooked Indicators](outputs/figures/08_zimra_overlooked_indicators.png)
+![Overlooked Indicators](notebooks/figures/08_zimra_overlooked_indicators.png)
 
-*Figure 7: High-risk rates for overlooked composite indicators vs population baseline.*
+*Figure 9: High-risk rates for overlooked composite indicators vs population baseline.*
 
 | Overlooked Indicator | Firms Flagged | High-Risk Rate | Risk Uplift |
 |---------------------|---------------|----------------|-------------|
@@ -355,21 +373,51 @@ Predicting actual audit outcomes (Qualified/Adverse vs Clean) achieved ensemble 
 
 ## 9. Model Performance Graphs
 
-### 9.1 ROC Curve — Full Model Comparison
+### 9.1 ROC & Precision-Recall — Full Model Comparison
 
-![Model ROC Comparison](outputs/figures/11_model_roc_comparison.png)
+![Model ROC and PR Comparison](notebooks/figures/11_model_roc_pr_comparison.png)
 
-*Figure 8: ROC curves for TaxGuard hybrid ensemble vs component models. The ensemble (AUC 0.995) achieves near-perfect high-risk discrimination.*
+*Figure 10: ROC (left) and precision-recall (right) curves for TaxGuard hybrid ensemble vs component models. The ensemble (ROC-AUC ≈ 0.995, PR-AUC ≈ 0.992) achieves near-perfect high-risk discrimination.*
 
-The TaxGuard ensemble curve hugs the upper-left corner — the ideal operating region. At any given false-positive rate, the system achieves the **highest true-positive rate**, meaning ZIMRA auditors reach genuinely risky firms **before** wasting effort on compliant ones.
+The TaxGuard ensemble curve hugs the upper-left corner — the ideal operating region. At any given false-positive rate, the system achieves the **highest true-positive rate**, meaning ZIMRA auditors reach genuinely risky firms **before** wasting effort on compliant ones. With PR-AUC of **0.992**, TaxGuard maintains high precision even at high recall levels — essential when audit teams have limited capacity.
 
-### 9.2 Precision-Recall Curve
+### 9.2 Confusion Matrix @ Optimal Threshold
 
-![Model PR Comparison](outputs/figures/11_model_pr_comparison.png)
+![Confusion Matrix](notebooks/figures/12_confusion_matrix.png)
 
-*Figure 9: Precision-recall curves — critical for cost-sensitive audit resource allocation where false positives (unnecessary audits) carry real operational costs.*
+*Figure 11: Out-of-fold confusion matrix at the F1-optimal probability threshold — operational view of true/false positives for audit queue sizing.*
 
-With PR-AUC of **0.992**, TaxGuard maintains high precision even at high recall levels — essential when audit teams have limited capacity and each unnecessary audit diverts resources from genuine non-compliance.
+### 9.3 Probability Calibration
+
+![Calibration Curve](notebooks/figures/13_calibration_curve.png)
+
+*Figure 12: Reliability diagram for ensemble risk scores (Brier ≈ 0.024) — confirms predicted probabilities align with observed high-risk rates for trustworthy ranking.*
+
+### 9.4 SHAP Explainability
+
+![SHAP Summary](notebooks/figures/14_shap_summary.png)
+
+*Figure 13: SHAP beeswarm plot — direction and magnitude of each feature's contribution to high-risk predictions.*
+
+![SHAP Bar](notebooks/figures/15_shap_bar.png)
+
+*Figure 14: Mean absolute SHAP values — global ranking of risk drivers for scorecard design.*
+
+![SHAP Waterfall Example](notebooks/figures/16_shap_waterfall_example.png)
+
+*Figure 15: Waterfall explanation for a single flagged filing — prototype auditor-facing view in AMS integration.*
+
+### 9.5 XGBoost Feature Importance (Gain)
+
+![XGBoost Feature Importance](notebooks/figures/17_xgb_feature_importance.png)
+
+*Figure 16: Gain-based importance from XGBoost — cross-checks SHAP rankings on tree splits.*
+
+### 9.6 Non-Compliance Detection (Secondary Target)
+
+![Non-Compliance ROC](notebooks/figures/18_noncompliance_roc.png)
+
+*Figure 17: ROC for predicting Qualified/Adverse vs Clean outcomes from pre-audit features — motivates enriched data and continuous-learning retraining rather than primary queue scoring.*
 
 ---
 
@@ -477,7 +525,7 @@ python scripts/generate_report_assets.py
 ```
 
 Metrics exported to: `outputs/metrics/experiment_summary.json`  
-Figures exported to: `outputs/figures/`
+Figures exported to: `notebooks/figures/`
 
 ---
 

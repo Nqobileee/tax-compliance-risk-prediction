@@ -16,10 +16,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     average_precision_score,
     brier_score_loss,
+    classification_report,
+    confusion_matrix,
     precision_recall_curve,
     roc_auc_score,
     roc_curve,
 )
+from sklearn.calibration import calibration_curve
 from sklearn.model_selection import StratifiedKFold
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler, label_binarize
@@ -30,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from taxguard_features import engineer_taxguard_features, get_model_feature_columns
 
-FIGURES = ROOT / "outputs" / "figures"
+FIGURES = ROOT / "notebooks" / "figures"
 METRICS = ROOT / "outputs" / "metrics"
 FIGURES.mkdir(parents=True, exist_ok=True)
 METRICS.mkdir(parents=True, exist_ok=True)
@@ -103,6 +106,24 @@ def main():
     axes[2].legend()
     plt.tight_layout()
     plt.savefig(FIGURES / "01_target_distributions.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    # --- Figure 2: Univariate distributions by risk tier ---
+    numeric_cols = [
+        "Revenue_Million", "Profit_Before_Tax_Million", "Effective_Tax_Rate",
+        "Tax_Rate_Deviation", "Offshore_Transactions_Million",
+        "Aggressive_Tax_Planning_Score", "Profit_Margin", "Offshore_Intensity",
+    ]
+    fig, axes = plt.subplots(2, 4, figsize=(18, 8))
+    for ax, col in zip(axes.ravel(), numeric_cols):
+        for label, color in zip(risk_order, sns.color_palette("Set2", 3)):
+            subset = df.loc[df["Tax_Risk_Label"] == label, col]
+            ax.hist(subset, bins=25, alpha=0.45, label=label, color=color, density=True)
+        ax.set_title(col.replace("_", " "))
+        ax.legend(fontsize=8)
+    plt.suptitle("Feature Distributions by Tax Risk Tier", y=1.02)
+    plt.tight_layout()
+    plt.savefig(FIGURES / "02_univariate_by_risk_tier.png", bbox_inches="tight", dpi=150)
     plt.close()
 
     # --- Univariate AUC ---
@@ -239,6 +260,35 @@ def main():
     plt.savefig(FIGURES / "08_zimra_overlooked_indicators.png", bbox_inches="tight", dpi=150)
     plt.close()
 
+    # --- Figure 9: Pairplot ---
+    scatter_cols = [
+        "Tax_Rate_Deviation", "Aggressive_Tax_Planning_Score",
+        "Offshore_Intensity", "Profit_Margin",
+    ]
+    g = sns.pairplot(
+        df, vars=scatter_cols, hue="Tax_Risk_Label", hue_order=risk_order,
+        palette="Set2", plot_kws={"alpha": 0.5, "s": 25}, diag_kind="kde", corner=False,
+    )
+    g.fig.suptitle("Pairwise Feature Relationships by Risk Tier", y=1.02)
+    plt.savefig(FIGURES / "09_pairplot_top_features.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    # --- Figure 10: Multiclass OvR ROC ---
+    y_bin = label_binarize(df["Tax_Risk_Label"], classes=risk_order)
+    fig, ax = plt.subplots(figsize=(8, 7))
+    for i, tier in enumerate(risk_order):
+        fpr, tpr, _ = roc_curve(y_bin[:, i], df["Tax_Rate_Deviation"])
+        auc_val = roc_auc_score(y_bin[:, i], df["Tax_Rate_Deviation"])
+        ax.plot(fpr, tpr, lw=2, label=f"{tier} vs Rest (AUC={auc_val:.3f})")
+    ax.plot([0, 1], [0, 1], "k--")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title("Multiclass OvR ROC — Tax Rate Deviation")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(FIGURES / "10_multiclass_ovr_roc.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
     # --- Model pipeline ---
     X = df[get_model_feature_columns(df)]
     y = df["High_Risk"]
@@ -305,39 +355,139 @@ def main():
         ens2[te] = meta2.predict_proba(stack2[te])[:, 1]
     summary["model_oof"]["non_compliance_ensemble_auc"] = round(float(roc_auc_score(y2, ens2)), 4)
 
-    # --- Model ROC comparison ---
+    # --- Figure 11: ROC & PR comparison (combined) ---
     all_preds = {
         "Isolation Forest": iso_oof,
         "Autoencoder": ae_oof,
         "HistGradientBoosting": hgb_oof,
         "TaxGuard Ensemble": ensemble_oof,
     }
-    fig, ax = plt.subplots(figsize=(9, 7))
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
     for name, preds in all_preds.items():
         fpr, tpr, _ = roc_curve(y, preds)
-        lw = 2.5 if name == "TaxGuard Ensemble" else 1.5
-        ax.plot(fpr, tpr, lw=lw, label=f"{name} (AUC={roc_auc_score(y, preds):.3f})")
+        axes[0].plot(
+            fpr, tpr, lw=2.5 if name == "TaxGuard Ensemble" else 1.5,
+            label=f"{name} (AUC={roc_auc_score(y, preds):.3f})",
+        )
+        p, r, _ = precision_recall_curve(y, preds)
+        axes[1].plot(
+            r, p, lw=2.5 if name == "TaxGuard Ensemble" else 1.5,
+            label=f"{name} (AP={average_precision_score(y, preds):.3f})",
+        )
+    axes[0].plot([0, 1], [0, 1], "k--")
+    axes[0].set_xlabel("False Positive Rate")
+    axes[0].set_ylabel("True Positive Rate")
+    axes[0].set_title("ROC Curves — TaxGuard Hybrid vs Component Models")
+    axes[0].legend(fontsize=8, loc="lower right")
+    axes[1].set_xlabel("Recall")
+    axes[1].set_ylabel("Precision")
+    axes[1].set_title("Precision-Recall Curves")
+    axes[1].legend(fontsize=8, loc="upper right")
+    plt.tight_layout()
+    plt.savefig(FIGURES / "11_model_roc_pr_comparison.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    y_pred = (ensemble_oof >= thr[best_idx]).astype(int)
+
+    # --- Figure 12: Confusion matrix ---
+    cm = confusion_matrix(y, y_pred)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(
+        cm, annot=True, fmt="d", cmap="Blues", ax=ax,
+        xticklabels=["Not High Risk", "High Risk"],
+        yticklabels=["Not High Risk", "High Risk"],
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title(f"Confusion Matrix @ threshold={thr[best_idx]:.3f}")
+    plt.tight_layout()
+    plt.savefig(FIGURES / "12_confusion_matrix.png", bbox_inches="tight", dpi=150)
+    plt.close()
+    summary["classification_report"] = classification_report(
+        y, y_pred, target_names=["Not High Risk", "High Risk"], output_dict=True
+    )
+
+    # --- Figure 13: Calibration curve ---
+    prob_true, prob_pred = calibration_curve(y, ensemble_oof, n_bins=10, strategy="quantile")
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.plot(prob_pred, prob_true, "s-", label="TaxGuard Ensemble", lw=2)
+    ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
+    ax.set_xlabel("Mean Predicted Probability")
+    ax.set_ylabel("Fraction of Positives")
+    ax.set_title("Calibration Curve — Probabilistic Risk Scores")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(FIGURES / "13_calibration_curve.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    # --- Figures 14–16: SHAP explainability ---
+    import shap
+
+    final_hgb = HistGradientBoostingClassifier(
+        max_depth=8, learning_rate=0.05, max_iter=600,
+        min_samples_leaf=10, l2_regularization=1.0, random_state=RANDOM_STATE,
+    )
+    final_hgb.fit(X, y)
+    explainer = shap.Explainer(final_hgb, X, algorithm="auto")
+    shap_values = explainer(X)
+
+    plt.figure(figsize=(10, 8))
+    shap.summary_plot(shap_values, X, show=False, max_display=20)
+    plt.title("SHAP Feature Importance — TaxGuard Risk Model")
+    plt.tight_layout()
+    plt.savefig(FIGURES / "14_shap_summary.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    plt.figure(figsize=(10, 8))
+    shap.plots.bar(shap_values, show=False, max_display=15)
+    plt.title("Mean |SHAP| — Top Risk Drivers")
+    plt.tight_layout()
+    plt.savefig(FIGURES / "15_shap_bar.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    high_risk_idx = int(df[df["High_Risk"] == 1].index[0])
+    plt.figure()
+    shap.plots.waterfall(shap_values[high_risk_idx], show=False, max_display=12)
+    plt.title(f"Waterfall Explanation — {df.loc[high_risk_idx, 'Company_ID']}")
+    plt.tight_layout()
+    plt.savefig(FIGURES / "16_shap_waterfall_example.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    # --- Figure 17: XGBoost feature importance ---
+    try:
+        import xgboost as xgb
+
+        final_xgb = xgb.XGBClassifier(
+            n_estimators=500, max_depth=6, learning_rate=0.05,
+            subsample=0.85, colsample_bytree=0.85, reg_lambda=2.0,
+            eval_metric="logloss", random_state=RANDOM_STATE, verbosity=0,
+        )
+        final_xgb.fit(X, y)
+        imp = pd.Series(final_xgb.feature_importances_, index=X.columns).sort_values(ascending=False).head(20)
+        fig, ax = plt.subplots(figsize=(10, 7))
+        imp.sort_values().plot(kind="barh", ax=ax, color="#2980b9")
+        ax.set_title("XGBoost Feature Importance (Gain) — Top 20")
+        ax.set_xlabel("Importance")
+        plt.tight_layout()
+        plt.savefig(FIGURES / "17_xgb_feature_importance.png", bbox_inches="tight", dpi=150)
+        plt.close()
+    except ImportError:
+        pass
+
+    # --- Figure 18: Non-compliance ROC ---
+    fpr_nc, tpr_nc, _ = roc_curve(y2, ens2)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(
+        fpr_nc, tpr_nc, lw=2.5, color="#c0392b",
+        label=f"Non-Compliance Ensemble (AUC={roc_auc_score(y2, ens2):.3f})",
+    )
     ax.plot([0, 1], [0, 1], "k--")
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
-    ax.set_title("TaxGuard Hybrid Model — ROC Curve Comparison")
-    ax.legend(loc="lower right")
+    ax.set_title("ROC — Audit Outcome Non-Compliance Detection")
+    ax.legend()
     plt.tight_layout()
-    plt.savefig(FIGURES / "11_model_roc_comparison.png", bbox_inches="tight", dpi=150)
-    plt.close()
-
-    # --- PR curve ---
-    fig, ax = plt.subplots(figsize=(9, 7))
-    for name, preds in all_preds.items():
-        p, r, _ = precision_recall_curve(y, preds)
-        ax.plot(r, p, lw=2.5 if name == "TaxGuard Ensemble" else 1.5,
-                label=f"{name} (AP={average_precision_score(y, preds):.3f})")
-    ax.set_xlabel("Recall")
-    ax.set_ylabel("Precision")
-    ax.set_title("TaxGuard Hybrid Model — Precision-Recall Curves")
-    ax.legend(loc="upper right")
-    plt.tight_layout()
-    plt.savefig(FIGURES / "11_model_pr_comparison.png", bbox_inches="tight", dpi=150)
+    plt.savefig(FIGURES / "18_noncompliance_roc.png", bbox_inches="tight", dpi=150)
     plt.close()
 
     with open(METRICS / "experiment_summary.json", "w") as f:

@@ -90,7 +90,7 @@ ROOT = Path.cwd()
 if ROOT.name == "notebooks":
     ROOT = ROOT.parent
 DATA_PATH = ROOT / "corporate_tax_risk_dataset.csv"
-FIGURES_DIR = ROOT / "outputs" / "figures"
+FIGURES_DIR = ROOT / "notebooks" / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 plt.style.use("seaborn-v0_8-whitegrid")
@@ -621,7 +621,7 @@ from taxguard_features import engineer_taxguard_features, get_model_feature_colu
 
 DATA_PATH = ROOT / "corporate_tax_risk_dataset.csv"
 MODEL_DIR = ROOT / "outputs" / "models"
-FIGURES_DIR = ROOT / "outputs" / "figures"
+FIGURES_DIR = ROOT / "notebooks" / "figures"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
