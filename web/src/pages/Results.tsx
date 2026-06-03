@@ -16,24 +16,27 @@ import {
 } from "recharts";
 import { RiskGauge } from "../components/RiskGauge";
 import { useFiling } from "../context/FilingContext";
+import { useIsMobile } from "../lib/useMediaQuery";
 import { formatPercent } from "../lib/scoring";
 
 export function Results() {
   const { filing, assessment } = useFiling();
+  const isMobile = useIsMobile();
 
   if (!assessment) {
     return <Navigate to="/assess" replace />;
   }
 
+  const labelMax = isMobile ? 14 : 22;
   const topCauses = assessment.contributions.slice(0, 8).map((c) => ({
-    name: c.label.length > 22 ? c.label.slice(0, 20) + "…" : c.label,
+    name: c.label.length > labelMax ? c.label.slice(0, labelMax - 1) + "…" : c.label,
     fullName: c.label,
     contribution: Math.round(c.contribution * 1000) / 10,
     fill: c.contribution > 0.08 ? "#059669" : "#94a3b8",
   }));
 
   const radarData = assessment.contributions.slice(0, 6).map((c) => ({
-    subject: c.label.split(" ")[0],
+    subject: isMobile ? c.label.split(" ")[0].slice(0, 8) : c.label.split(" ")[0],
     value: Math.round(c.value * 100),
     fullMark: 100,
   }));
@@ -41,14 +44,16 @@ export function Results() {
   const tierClass =
     assessment.tier === "High" ? "tag-high" : assessment.tier === "Medium" ? "tag-medium" : "tag-low";
 
+  const chartMargin = isMobile
+    ? { top: 8, right: 12, left: 4, bottom: 8 }
+    : { top: 8, right: 20, left: 10, bottom: 8 };
+
   return (
     <div className="page">
       <p className="eyebrow">Risk Assessment Report</p>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "2rem" }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ margin: "0.5rem 0" }}>
-            {filing.companyId || "Corporate Entity"}
-          </h1>
+          <h1>{filing.companyId || "Corporate Entity"}</h1>
           <p className="lead" style={{ margin: 0 }}>
             TaxGuard hybrid ensemble output — probabilistic risk score with feature attribution
           </p>
@@ -56,8 +61,8 @@ export function Results() {
         <span className={`tag ${tierClass}`}>{assessment.tier} Risk Tier</span>
       </div>
 
-      <div className="grid-2" style={{ marginBottom: "2rem" }}>
-        <div className="card-glow" style={{ textAlign: "center" }}>
+      <div className="grid-2 mb-2">
+        <div className="card-glow text-center">
           <p className="eyebrow" style={{ marginBottom: "0.5rem" }}>TaxGuard Risk Score</p>
           <RiskGauge score={assessment.score} tier={assessment.tier} />
           <p style={{ margin: "1rem 0 0", fontSize: "0.88rem", color: "var(--text-muted)" }}>
@@ -69,28 +74,30 @@ export function Results() {
         </div>
 
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: "1rem" }}>Key filing indicators</h3>
-          <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse" }}>
-            <tbody>
-              {[
-                ["Tax Rate Deviation", `${assessment.features.taxRateDeviation.toFixed(2)}%`],
-                ["Profit Margin", formatPercent(assessment.features.profitMargin)],
-                ["Offshore Intensity", formatPercent(assessment.features.offshoreIntensity, 2)],
-                ["Tax Underpayment Ratio", formatPercent(Math.max(0, assessment.features.taxUnderpaymentRatio))],
-                ["Control Risk Index", String(assessment.features.controlRisk)],
-                ["Planning × Deviation", assessment.features.planningDeviationInteraction.toFixed(2)],
-              ].map(([k, v]) => (
-                <tr key={k} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: "0.5rem 0", color: "var(--text-muted)" }}>{k}</td>
-                  <td style={{ padding: "0.5rem 0", textAlign: "right", fontFamily: "var(--mono)" }}>{v}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h3 className="card-title">Key filing indicators</h3>
+          <div className="table-scroll">
+            <table className="data-table">
+              <tbody>
+                {[
+                  ["Tax Rate Deviation", `${assessment.features.taxRateDeviation.toFixed(2)}%`],
+                  ["Profit Margin", formatPercent(assessment.features.profitMargin)],
+                  ["Offshore Intensity", formatPercent(assessment.features.offshoreIntensity, 2)],
+                  ["Tax Underpayment Ratio", formatPercent(Math.max(0, assessment.features.taxUnderpaymentRatio))],
+                  ["Control Risk Index", String(assessment.features.controlRisk)],
+                  ["Planning × Deviation", assessment.features.planningDeviationInteraction.toFixed(2)],
+                ].map(([k, v]) => (
+                  <tr key={k}>
+                    <td style={{ color: "var(--text-muted)" }}>{k}</td>
+                    <td>{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <section style={{ marginBottom: "2.5rem" }}>
+      <section className="mb-2-5">
         <h2 className="section-title">Leading risk drivers</h2>
         <p className="section-sub">
           SHAP-style feature attribution — the financial indicators contributing most to this filing's
@@ -100,10 +107,19 @@ export function Results() {
           <div className="card">
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topCauses} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <BarChart
+                  data={topCauses}
+                  layout="vertical"
+                  margin={{ ...chartMargin, left: isMobile ? 4 : 10 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                  <XAxis type="number" domain={[0, "auto"]} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10 }} />
+                  <XAxis type="number" domain={[0, "auto"]} tick={{ fontSize: isMobile ? 9 : 11 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={isMobile ? 72 : 110}
+                    tick={{ fontSize: isMobile ? 8 : 10 }}
+                  />
                   <Tooltip
                     formatter={(v: number) => [`${v}`, "Contribution index"]}
                     labelFormatter={(_, payload) =>
@@ -123,10 +139,14 @@ export function Results() {
           <div className="card">
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
+                <RadarChart data={radarData} margin={chartMargin}>
                   <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: isMobile ? 9 : 11 }} />
+                  <PolarRadiusAxis
+                    angle={30}
+                    domain={[0, 100]}
+                    tick={{ fontSize: isMobile ? 8 : 10 }}
+                  />
                   <Radar
                     name="Risk signal"
                     dataKey="value"
@@ -143,7 +163,7 @@ export function Results() {
       </section>
 
       {assessment.overlookedFlags.length > 0 && (
-        <section style={{ marginBottom: "2.5rem" }}>
+        <section className="mb-2-5">
           <h2 className="section-title">ZIMRA overlooked indicators detected</h2>
           <p className="section-sub">
             Composite patterns that manual audit selection typically misses — identified in TaxGuard
@@ -157,7 +177,7 @@ export function Results() {
         </section>
       )}
 
-      <section style={{ marginBottom: "2rem" }}>
+      <section className="mb-2">
         <h2 className="section-title">Implications for this entity</h2>
         <div className="card">
           <p style={{ margin: "0 0 1rem", color: "var(--text-muted)", fontSize: "0.92rem" }}>
@@ -191,7 +211,7 @@ export function Results() {
         </div>
       </section>
 
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+      <div className="btn-row">
         <Link to="/assess" className="btn btn-secondary">
           Assess Another Filing
         </Link>

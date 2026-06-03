@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useIsMobile } from "../lib/useMediaQuery";
 import {
   auditOutcomes,
   featureAuc,
@@ -24,19 +25,25 @@ import {
 } from "../lib/stats";
 
 export function Stats() {
+  const isMobile = useIsMobile();
   const totalRecords = stats.dataset.records;
+  const tickSm = isMobile ? 9 : 11;
+  const pieInner = isMobile ? 40 : 55;
+  const pieOuter = isMobile ? 70 : 90;
 
   return (
     <div className="page">
       <p className="eyebrow">Population Analytics & Model Validation</p>
-      <h1 style={{ margin: "0.5rem 0 0.75rem" }}>System performance statistics</h1>
-      <p className="lead" style={{ marginBottom: "2.5rem" }}>
+      <h1 className="hero-title" style={{ maxWidth: "none", fontSize: "clamp(1.5rem, 5vw, 2.25rem)" }}>
+        System performance statistics
+      </h1>
+      <p className="lead mb-2-5">
         Aggregate metrics from the TaxGuard research experiment — 1,900 corporate tax filings,
         5-fold stratified cross-validation, out-of-fold predictions. These statistics underpin
         the case for ZIMRA deployment and national revenue mobilisation under NDS2.
       </p>
 
-      <div className="grid-3" style={{ marginBottom: "2.5rem" }}>
+      <div className="grid-3 mb-2-5">
         <div className="card-glow">
           <p className="stat-label">Corporates analysed</p>
           <p className="stat-value">{totalRecords.toLocaleString()}</p>
@@ -63,9 +70,9 @@ export function Stats() {
         </div>
       </div>
 
-      <div className="grid-2" style={{ marginBottom: "2.5rem" }}>
+      <div className="grid-2 mb-2-5">
         <div className="card">
-          <h3 className="section-title" style={{ fontSize: "1.05rem" }}>Risk tier distribution</h3>
+          <h3 className="card-title-lg">Risk tier distribution</h3>
           <p className="section-sub">Balanced three-tier classification across research dataset</p>
           <div className="chart-wrap-sm">
             <ResponsiveContainer width="100%" height="100%">
@@ -76,8 +83,8 @@ export function Stats() {
                   nameKey="tier"
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={90}
+                  innerRadius={pieInner}
+                  outerRadius={pieOuter}
                   paddingAngle={3}
                 >
                   {riskDistribution.map((entry, i) => (
@@ -85,21 +92,21 @@ export function Stats() {
                   ))}
                 </Pie>
                 <Tooltip formatter={(v: number) => [v, "Filings"]} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: isMobile ? 11 : 12 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="card">
-          <h3 className="section-title" style={{ fontSize: "1.05rem" }}>Audit outcome distribution</h3>
+          <h3 className="card-title-lg">Audit outcome distribution</h3>
           <p className="section-sub">Post-audit ground truth for continuous learning loop</p>
           <div className="chart-wrap-sm">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={auditOutcomes}>
+              <BarChart data={auditOutcomes} margin={{ left: isMobile ? -10 : 0, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="outcome" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
+                <XAxis dataKey="outcome" tick={{ fontSize: tickSm }} />
+                <YAxis tick={{ fontSize: tickSm }} width={isMobile ? 32 : 40} />
                 <Tooltip />
                 <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -108,18 +115,27 @@ export function Stats() {
         </div>
       </div>
 
-      <section style={{ marginBottom: "2.5rem" }}>
+      <section className="mb-2-5">
         <h2 className="section-title">Model comparison — ROC-AUC</h2>
         <p className="section-sub">
           TaxGuard ensemble vs component models and ZIMRA's existing Audit_Likelihood baseline
         </p>
         <div className="card">
-          <div className="chart-wrap">
+          <div className={isMobile ? "chart-wrap-tall" : "chart-wrap"}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={modelComparison} layout="vertical" margin={{ left: 20, right: 30 }}>
+              <BarChart
+                data={modelComparison}
+                layout="vertical"
+                margin={{ left: isMobile ? 4 : 20, right: isMobile ? 12 : 30, top: 8, bottom: 8 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" domain={[0, 1]} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="model" width={130} tick={{ fontSize: 11 }} />
+                <XAxis type="number" domain={[0, 1]} tick={{ fontSize: tickSm }} />
+                <YAxis
+                  type="category"
+                  dataKey="model"
+                  width={isMobile ? 88 : 130}
+                  tick={{ fontSize: isMobile ? 8 : 11 }}
+                />
                 <Tooltip formatter={(v: number) => [v.toFixed(4), "ROC-AUC"]} />
                 <Bar dataKey="auc" radius={[0, 4, 4, 0]}>
                   {modelComparison.map((entry, i) => (
@@ -135,30 +151,30 @@ export function Stats() {
         </div>
       </section>
 
-      <section style={{ marginBottom: "2.5rem" }}>
+      <section className="mb-2-5">
         <h2 className="section-title">Top feature discriminative power</h2>
         <p className="section-sub">Univariate AUC-ROC — features ZIMRA should prioritise in audit checklists</p>
         <div className="card">
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={featureAuc} margin={{ bottom: 60 }}>
+              <LineChart data={featureAuc} margin={{ bottom: isMobile ? 72 : 60, left: 4, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis
                   dataKey="feature"
-                  tick={{ fontSize: 9 }}
+                  tick={{ fontSize: isMobile ? 7 : 9 }}
                   interval={0}
-                  height={80}
+                  height={isMobile ? 64 : 80}
                   angle={-35}
                   textAnchor="end"
                 />
-                <YAxis domain={[0, 1]} tick={{ fontSize: 11 }} />
+                <YAxis domain={[0, 1]} tick={{ fontSize: tickSm }} width={isMobile ? 28 : 36} />
                 <Tooltip formatter={(v: number) => [v.toFixed(4), "AUC-ROC"]} />
                 <Line
                   type="monotone"
                   dataKey="auc"
                   stroke="#059669"
                   strokeWidth={2.5}
-                  dot={{ fill: "#10b981", r: 4 }}
+                  dot={{ fill: "#10b981", r: isMobile ? 3 : 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -166,32 +182,30 @@ export function Stats() {
         </div>
       </section>
 
-      <section style={{ marginBottom: "2.5rem" }}>
+      <section className="mb-2-5">
         <h2 className="section-title">Overlooked indicators — population analysis</h2>
         <p className="section-sub">
           Composite risk patterns manual selection misses. Risk uplift vs 33.4% baseline high-risk rate.
         </p>
-        <div className="card" style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+        <div className="card table-scroll">
+          <table className="stats-table">
             <thead>
-              <tr style={{ borderBottom: "2px solid var(--border)", textAlign: "left" }}>
-                <th style={{ padding: "0.75rem 0.5rem" }}>Indicator</th>
-                <th style={{ padding: "0.75rem 0.5rem" }}>Flagged</th>
-                <th style={{ padding: "0.75rem 0.5rem" }}>High-Risk Rate</th>
-                <th style={{ padding: "0.75rem 0.5rem" }}>Uplift</th>
+              <tr>
+                <th>Indicator</th>
+                <th>Flagged</th>
+                <th>High-Risk Rate</th>
+                <th>Uplift</th>
               </tr>
             </thead>
             <tbody>
               {overlookedIndicators.map((row) => (
-                <tr key={row.indicator} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: "0.65rem 0.5rem", color: "var(--text-muted)" }}>{row.indicator}</td>
-                  <td style={{ padding: "0.65rem 0.5rem", fontFamily: "var(--mono)" }}>{row.flagged_firms}</td>
-                  <td style={{ padding: "0.65rem 0.5rem", fontFamily: "var(--mono)" }}>
-                    {(row.high_risk_rate * 100).toFixed(1)}%
+                <tr key={row.indicator}>
+                  <td style={{ color: "var(--text-muted)", maxWidth: isMobile ? 200 : undefined }}>
+                    {row.indicator}
                   </td>
-                  <td style={{ padding: "0.65rem 0.5rem", fontFamily: "var(--mono)", color: "var(--green-700)" }}>
-                    {row.risk_uplift_x}x
-                  </td>
+                  <td>{row.flagged_firms}</td>
+                  <td>{(row.high_risk_rate * 100).toFixed(1)}%</td>
+                  <td style={{ color: "var(--green-700)" }}>{row.risk_uplift_x}x</td>
                 </tr>
               ))}
             </tbody>
@@ -203,7 +217,7 @@ export function Stats() {
         <h2 className="section-title">National fiscal impact</h2>
         <div className="grid-2">
           <div className="card">
-            <h3 style={{ marginTop: 0, fontSize: "1rem" }}>Revenue mobilisation</h3>
+            <h3 className="card-title">Revenue mobilisation</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "0.92rem", margin: 0 }}>
               With 30.6% of filings showing Qualified or Adverse audit outcomes in the research
               dataset, even marginal improvements in audit targeting translate to substantial
@@ -213,7 +227,7 @@ export function Stats() {
             </p>
           </div>
           <div className="card">
-            <h3 style={{ marginTop: 0, fontSize: "1rem" }}>Equity for compliant corporates</h3>
+            <h3 className="card-title">Equity for compliant corporates</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "0.92rem", margin: 0 }}>
               Zimbabwean corporates that meet their statutory obligations should not bear the
               indirect cost of under-audited competitors. TaxGuard reduces disproportionate scrutiny

@@ -69,15 +69,17 @@ export function InputForm() {
   return (
     <div className="page-narrow">
       <p className="eyebrow">Corporate Filing Input</p>
-      <h1 style={{ margin: "0.5rem 0 0.75rem" }}>Assess tax return risk</h1>
-      <p className="lead" style={{ marginBottom: "2rem" }}>
+      <h1 className="hero-title" style={{ maxWidth: "none", fontSize: "clamp(1.5rem, 5vw, 2rem)" }}>
+        Assess tax return risk
+      </h1>
+      <p className="lead mb-2">
         Enter corporate filing details below. In production, these fields will be auto-populated from
         ZIMRA data pipelines — e-filing API, financial statement registry, enforcement database, and
         transfer pricing records.
       </p>
 
-      <div className="card-glow" style={{ marginBottom: "1.5rem", padding: "1rem 1.25rem" }}>
-        <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)" }}>
+      <div className="card-glow pipeline-banner">
+        <p>
           <span className="mono" style={{ color: "var(--green-600)" }}>PIPELINE STATUS:</span>{" "}
           Manual input mode — ZIMRA integration pending. Tax rate deviation will be computed as
           |Statutory Rate − Effective Rate| during scoring.
@@ -85,21 +87,14 @@ export function InputForm() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div
-          className="card"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: "1.25rem",
-            marginBottom: "1.5rem",
-          }}
-        >
+        <div className="card form-grid">
           {fields.map(({ key, label, hint, type = "number", min, max, step }) => (
             <div className="form-group" key={key}>
               <label htmlFor={key}>{label}</label>
               <input
                 id={key}
                 type={type}
+                inputMode={type === "number" ? "decimal" : "text"}
                 value={key === "companyId" ? filing.companyId : filing[key]}
                 onChange={(e) => update(key, e.target.value)}
                 min={min}
@@ -112,7 +107,7 @@ export function InputForm() {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="btn-row">
           <button type="submit" className="btn btn-primary">
             Run TaxGuard Assessment
           </button>

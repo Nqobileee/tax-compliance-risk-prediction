@@ -4,9 +4,9 @@ import { modelMetrics } from "../lib/stats";
 export function Home() {
   return (
     <div className="page">
-      <section style={{ marginBottom: "3.5rem" }}>
+      <section className="mb-2-5">
         <p className="eyebrow">Prototype Demonstration — ZIMRA / 4IR Research</p>
-        <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", maxWidth: "18ch", margin: "0.75rem 0 1rem" }}>
+        <h1 className="hero-title">
           Intelligent corporate tax risk scoring for Zimbabwe
         </h1>
         <p className="lead">
@@ -14,7 +14,7 @@ export function Home() {
           returns and assigns probabilistic risk scores — replacing manual, inconsistent audit
           selection with data-driven prioritisation at scale.
         </p>
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.75rem", flexWrap: "wrap" }}>
+        <div className="hero-actions">
           <Link to="/assess" className="btn btn-primary">
             Assess a Corporate Filing
           </Link>
@@ -24,7 +24,7 @@ export function Home() {
         </div>
       </section>
 
-      <div className="grid-3" style={{ marginBottom: "3rem" }}>
+      <div className="grid-3 mb-2">
         <div className="card-glow">
           <p className="eyebrow">Model ROC-AUC</p>
           <p className="stat-value">{modelMetrics.ensemble_roc_auc.toFixed(4)}</p>
@@ -44,7 +44,7 @@ export function Home() {
         </div>
       </div>
 
-      <section style={{ marginBottom: "3rem" }}>
+      <section className="mb-2">
         <h2 className="section-title">Why this matters to Zimbabwe</h2>
         <p className="section-sub">
           Corporate tax non-compliance directly undermines fiscal sustainability. Every undetected
@@ -52,7 +52,7 @@ export function Home() {
         </p>
         <div className="grid-2">
           <div className="card">
-            <h3 style={{ marginTop: 0, fontSize: "1.05rem" }}>For ZIMRA operations</h3>
+            <h3 className="card-title-lg">For ZIMRA operations</h3>
             <div className="info-block">
               <p>
                 Manual audit selection is resource-intensive and cannot scale with filing volume.
@@ -69,7 +69,7 @@ export function Home() {
             </div>
           </div>
           <div className="card">
-            <h3 style={{ marginTop: 0, fontSize: "1.05rem" }}>For Zimbabwean corporates & citizens</h3>
+            <h3 className="card-title-lg">For Zimbabwean corporates & citizens</h3>
             <div className="info-block">
               <p>
                 Compliant corporations compete on a level playing field when aggressive tax avoiders
@@ -87,7 +87,7 @@ export function Home() {
         </div>
       </section>
 
-      <section style={{ marginBottom: "3rem" }}>
+      <section className="mb-2">
         <h2 className="section-title">Hybrid ML architecture</h2>
         <p className="section-sub">
           Unsupervised anomaly detection fused with supervised gradient boosting and stacked
@@ -110,7 +110,7 @@ planning aggressiveness · internal control weakness · penalty history`}</pre>
       <section>
         <h2 className="section-title">Research context</h2>
         <div className="card">
-          <p style={{ margin: "0 0 1rem", color: "var(--text-muted)", fontSize: "0.92rem" }}>
+          <p className="info-block" style={{ border: "none", padding: 0, margin: "0 0 1rem", color: "var(--text-muted)", fontSize: "0.92rem" }}>
             <strong>TaxGuard: An AI-Based Anomaly Detection Framework for Corporate Tax Return
             Risk Scoring at ZIMRA</strong> — Authors: Edith Muyambiri & Andile Bhebhe. Theme: Area 1,
             Data, Automation and Intelligent Systems in the 4IR Era. Category: Prototype Demonstration.

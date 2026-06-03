@@ -92,3 +92,27 @@
   background: linear-gradient(to top, #d97706, #fbbf24);
   box-shadow: 0 0 12px rgba(217, 119, 6, 0.4);
 }
+
+@media (max-width: 480px) {
+  .risk-gauge,
+  .gauge-arc {
+    width: 180px;
+  }
+
+  .gauge-arc {
+    height: 95px;
+  }
+
+  .gauge-arc::before {
+    border-width: 12px;
+    border-radius: 90px 90px 0 0;
+  }
+
+  .gauge-fill {
+    height: 80px;
+  }
+
+  .gauge-value {
+    font-size: 2rem;
+  }
+}
