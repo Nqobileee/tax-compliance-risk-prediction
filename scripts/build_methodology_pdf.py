@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -66,6 +67,14 @@ CSS = """
     font-size: 10.5pt;
   }
   .katex-display { margin: 14px 0; overflow-x: auto; }
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 14px auto;
+    page-break-inside: avoid;
+  }
+  p em { font-size: 9.5pt; color: #4a5568; }
 </style>
 """
 
@@ -73,6 +82,7 @@ CSS = """
 def md_to_html(md_path: Path, html_path: Path) -> None:
     import pypandoc
 
+    resource_path = f"{md_path.parent}{os.pathsep}{ROOT}"
     body = pypandoc.convert_file(
         str(md_path),
         "html",
@@ -83,6 +93,7 @@ def md_to_html(md_path: Path, html_path: Path) -> None:
             "--toc-depth=3",
             "--number-sections",
             "--mathjax",
+            f"--resource-path={resource_path}",
         ],
     )
     # Inject KaTeX into <head>

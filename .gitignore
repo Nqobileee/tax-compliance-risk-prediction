@@ -11,5 +11,6 @@ web/dist/
 # Example reference papers (local copies only; methodology is in docs/*.md)
 docs/Credit*.pdf
 docs/Optimisation*.pdf
+docs/The_role_of_universities_in_the_development_of_sma.pdf
 docs/_methodology_build.html
 docs/_test.*

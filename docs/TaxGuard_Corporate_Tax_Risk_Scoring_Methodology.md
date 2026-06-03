@@ -262,6 +262,12 @@ Empirical prevalence: $\bar{y} = \frac{1}{N}\sum_i y_i = 0.3337$; $\bar{y}^{(\ma
 
 **Data governance.** Zero missing values and zero duplicate IDs support straight-through ingestion into a warehouse mart. Balanced **High / Medium / Low** tiers (≈33% each) simplify threshold tuning in the prototype; live ZIMRA populations may be imbalanced, requiring **PR-AUC** and cost-sensitive thresholds (Section 4.6). **Audit_Outcome** imbalance (69% Clean) mirrors realistic post-audit distributions and motivates a **secondary** non-compliance model (AUROC ≈ 0.51) separate from the primary queue ranker (AUROC ≈ 0.99).
 
+![Figure 1 — Target variable distributions](../notebooks/figures/01_target_distributions.png)
+
+*Figure 1. Distribution of tax risk labels (balanced thirds), audit outcomes (69.4% Clean), and ZIMRA `Audit_Likelihood` heuristic.*
+
+**EDA finding:** Balanced risk tiers support fair ML training; **30.6%** Qualified/Adverse outcomes indicate substantial audit-yield headroom if selection improves.
+
 ---
 
 ### 4.3 Feature engineering map $\phi(\cdot)$
@@ -540,39 +546,195 @@ Artefacts: `outputs/models/taxguard_ensemble.pkl`, `outputs/models/taxguard_metr
 
 ## 5.0 Results and discussion
 
-This section interprets experimental outputs against the abstract’s claims: hybrid detection, probabilistic scoring, explainability, and continuous learning readiness.
+This section presents **exploratory data analysis (EDA)** figures from `01_taxguard_eda.ipynb` and **model evaluation** figures from `02_taxguard_hybrid_model.ipynb`, with interpretation aligned to ZIMRA policy and the abstract.
 
 ### 5.0.1 Summary of hypothesis tests
 
-The prototype confirms four hypotheses: (H1) engineered tax-gap features outperform `Audit_Likelihood` in univariate ranking; (H2) composite masks surface policy-relevant cohorts manual rules miss; (H3) supervised gradient boosting plus stacking achieves near-perfect OOF separation of High risk tier; (H4) post-audit outcomes are not fully predictable from pre-audit fields alone, so outcomes should drive **retraining** more than **same-year queue scoring**. H3 supports deployment of **p_hat** as primary queue key; H4 supports the dual-target design in equations [4]–[5].
+| ID | Hypothesis | EDA / model evidence | Verdict |
+|----|------------|----------------------|---------|
+| H1 | Tax-gap features outperform `Audit_Likelihood` | AUROC 0.9165 vs 0.6965 (Figures 5–6) | Supported |
+| H2 | Composite masks reveal hidden risk cohorts | Uplift up to 2.74× (Figure 8) | Supported |
+| H3 | Hybrid stack ranks High risk accurately | OOF AUROC 0.9948 (Figure 11) | Supported |
+| H4 | Audit outcomes need separate learning loop | OOF AUROC 0.5091 (Figure 18) | Supported |
 
-### 5.1 Exploratory figures
+---
 
-| Fig. | File | Finding |
-|------|------|---------|
-| 1 | `01_target_distributions.png` | Balanced risk tiers; 30.6% non-clean audits |
-| 2 | `02_univariate_by_risk_tier.png` | Tier-stratified revenue, ETR, deviation |
-| 3 | `03_bivariate_boxplots.png` | High tier: wider deviation, planning |
-| 4 | `04_correlation_matrix.png` | Deviation ↔ underpayment; planning partly independent |
-| 5 | `05_univariate_auc_ranking.png` | Deviation dominates |
-| 6 | `06_roc_univariate_top_features.png` | Deviation vs baseline ROC |
-| 7 | `07_risk_outcome_crosstab.png` | Tier–outcome calibration |
-| 8 | `08_zimra_overlooked_indicators.png` | Composite uplifts |
-| 9 | `09_pairplot_top_features.png` | Non-linear tier separation |
-| 10 | `10_multiclass_ovr_roc.png` | OvR with deviation |
+### 5.1 EDA — Feature distributions by risk tier
 
-### 5.2 Model figures
+![Figure 2 — Univariate distributions by risk tier](../notebooks/figures/02_univariate_by_risk_tier.png)
 
-| Fig. | File | Finding |
-|------|------|---------|
-| 11 | `11_model_roc_pr_comparison.png` | Ensemble dominates components |
-| 12 | `12_confusion_matrix.png` | Low false positives at τ* |
-| 13 | `13_calibration_curve.png` | Scores track observed rates |
-| 14–16 | SHAP plots | Explainable drivers |
-| 17 | `17_xgb_feature_importance.png` | Gain alignment |
-| 18 | `18_noncompliance_roc.png` | Weak outcome prediction |
+*Figure 2. Density histograms of revenue, profit, ETR, tax rate deviation, offshore exposure, and planning score by Low / Medium / High tier.*
 
-### 5.3 Comparison to example credit-scoring benchmarks
+**Findings.**
+
+- **High-risk** filings show heavier right tails on tax rate deviation and aggressive planning.
+- **Revenue** alone does not separate tiers cleanly — revenue-only manual rules are weakly justified.
+- **Offshore intensity** rises toward the High tier, supporting offshore features in $\phi(\cdot)$.
+
+---
+
+### 5.2 EDA — Dominant signal: tax rate deviation (univariate AUC)
+
+| Feature | AUROC (High risk) | Strength |
+|---------|-------------------|----------|
+| Tax_Rate_Deviation | **0.9165** | Very strong |
+| Planning_Deviation_Interaction | 0.8661 | Strong |
+| Tax_Underpayment_Ratio | 0.7800 | Strong |
+| Tax_Gap_Million | 0.7453 | Moderate–strong |
+| Audit_Planning_Synergy | 0.7105 | Moderate |
+| Audit_Likelihood (baseline) | **0.6965** | Below top engineered |
+| Effective_Tax_Rate (alone) | 0.2158 | Weak alone |
+
+![Figure 3 — Univariate AUC ranking](../notebooks/figures/05_univariate_auc_ranking.png)
+
+*Figure 3. Top features by $\mathrm{AUROC}(z)$ for predicting High risk.*
+
+**Findings.** Statutory–effective **gap** metrics dominate; ZIMRA’s legacy score ranks below engineered interactions. Effective tax rate in isolation is misleading (AUROC ≈ 0.22) because direction of deviation matters.
+
+---
+
+### 5.3 EDA — Univariate ROC vs ZIMRA baseline
+
+![Figure 4 — Univariate ROC curves](../notebooks/figures/06_roc_univariate_top_features.png)
+
+*Figure 4. ROC curves: top univariate predictors vs `Audit_Likelihood` (left: High risk; right: non-compliance).*
+
+**Findings.**
+
+- **Tax rate deviation** hugs the upper-left corner for High-risk detection.
+- **`Audit_Likelihood`** is closer to the diagonal — confirms need for ML replacement.
+- Non-compliance at univariate level is weak — motivates the full hybrid model (Section 5.8).
+
+---
+
+### 5.4 EDA — Risk tier separation and correlations
+
+![Figure 5 — Bivariate boxplots](../notebooks/figures/03_bivariate_boxplots.png)
+
+*Figure 5. Boxplots of tax deviation, planning score, offshore intensity, profit margin, control risk, and fines by risk tier.*
+
+**Findings.** High tier shows higher planning scores and wider deviation; profit margin overlaps across tiers (revenue/profit-only rules insufficient).
+
+![Figure 6 — Correlation matrix](../notebooks/figures/04_correlation_matrix.png)
+
+*Figure 6. Correlation heatmap of primary TaxGuard indicators.*
+
+**Findings.** `Tax_Rate_Deviation` correlates with underpayment ratio; planning score adds partially independent signal — justifies interaction terms $\psi_{1,i}$, $\psi_{2,i}$ in Section 4.3.
+
+---
+
+### 5.5 EDA — Risk labels vs audit outcomes
+
+![Figure 7 — Risk–outcome crosstab](../notebooks/figures/07_risk_outcome_crosstab.png)
+
+*Figure 7. $P(\text{audit outcome} \mid \text{risk tier})$.*
+
+| Risk tier | Clean | Qualified | Adverse |
+|-----------|-------|-----------|---------|
+| Low | 67.5% | 27.4% | 5.0% |
+| Medium | 72.8% | 22.3% | 4.9% |
+| High | 68.0% | 25.9% | 6.2% |
+
+**Findings.** $\chi^2 = 6.13$, $p = 0.19$ — risk tiers and outcomes overlap but are not identical → use **$y_i$** for queue ranking and **$y_i^{(\mathrm{nc})}$** for retraining.
+
+---
+
+### 5.6 EDA — Overlooked composite indicators (ZIMRA policy gaps)
+
+![Figure 8 — Overlooked indicators](../notebooks/figures/08_zimra_overlooked_indicators.png)
+
+*Figure 8. High-risk rate among flagged cohorts vs population baseline (33.4%).*
+
+| Indicator | Flagged *n* | High-risk rate | Uplift |
+|-----------|-------------|----------------|--------|
+| Top-decile tax deviation + zero fines | 116 | **91.4%** | **2.74×** |
+| High planning + clean audit history | 368 | 46.7% | 1.40× |
+| High offshore + weak controls | 196 | 38.3% | 1.15× |
+| Concentrated ownership + ≥3 offshore subs | 99 | 35.4% | 1.06× |
+| Low profit margin + high revenue | 180 | 32.8% | 0.98× |
+
+**Findings for auditors.**
+
+1. **First-time aggressors (2.74×):** no fine history does not imply low risk.
+2. **Clean history ≠ safe (1.40×):** 368 firms with high planning but Clean past audits.
+3. **Offshore + weak controls (1.15×):** composite transfer-pricing signal.
+4. **Revenue-only (0.98×):** no uplift — deprioritise turnover-only selection.
+
+---
+
+### 5.7 EDA — Pairwise structure and multiclass separation
+
+![Figure 9 — Pairplot](../notebooks/figures/09_pairplot_top_features.png)
+
+*Figure 9. Pairwise scatter/density for deviation, planning, offshore intensity, and profit margin by tier.*
+
+**Findings.** Non-linear boundaries between tiers — supports tree-based boosting over linear scorecards.
+
+![Figure 10 — Multiclass OvR ROC](../notebooks/figures/10_multiclass_ovr_roc.png)
+
+*Figure 10. One-vs-rest ROC using tax rate deviation as score variable.*
+
+**Findings.** Deviation separates all three tiers with usable AUC in OvR framing — consistent with three-tier risk label design.
+
+---
+
+### 5.8 Model evaluation — Hybrid ensemble performance
+
+| Model | OOF AUROC | Role |
+|-------|-----------|------|
+| Isolation Forest | 0.3157 | Unsupervised |
+| Autoencoder | 0.4240 | Unsupervised |
+| HistGradientBoosting | **0.9964** | Supervised core |
+| **TaxGuard ensemble** | **0.9948** | Production score |
+| Audit_Likelihood | 0.6965 | Baseline |
+
+![Figure 11 — ROC and PR curves](../notebooks/figures/11_model_roc_pr_comparison.png)
+
+*Figure 11. OOF ROC (left) and precision–recall (right): ensemble vs component models.*
+
+**Findings.** Ensemble achieves AUROC **0.9948**, PR-AUC **0.9920** — far above baseline **0.6965** (~43% relative AUC gain).
+
+![Figure 12 — Confusion matrix](../notebooks/figures/12_confusion_matrix.png)
+
+*Figure 12. OOF confusion matrix at $\tau^{\star} = 0.7811$.*
+
+**Findings.** Accuracy **97.2%**; precision **97.1%** for High risk — low false-positive burden on compliant firms.
+
+![Figure 13 — Calibration curve](../notebooks/figures/13_calibration_curve.png)
+
+*Figure 13. Reliability diagram; Brier score **0.0244**.*
+
+**Findings.** Predicted probabilities align with observed rates — suitable for risk-weighted audit planning.
+
+---
+
+### 5.9 Model explainability (SHAP) and secondary task
+
+![Figure 14 — SHAP summary](../notebooks/figures/14_shap_summary.png)
+
+*Figure 14. SHAP beeswarm — global feature effects on risk score.*
+
+![Figure 15 — SHAP bar](../notebooks/figures/15_shap_bar.png)
+
+*Figure 15. Mean $|\mathrm{SHAP}|$ — top global drivers.*
+
+![Figure 16 — SHAP waterfall](../notebooks/figures/16_shap_waterfall_example.png)
+
+*Figure 16. Waterfall explanation for one flagged `Company_ID` (auditor prototype view).*
+
+**Findings.** Tax-gap and planning features drive flags; satisfies abstract transparency requirement.
+
+![Figure 17 — XGBoost importance](../notebooks/figures/17_xgb_feature_importance.png)
+
+*Figure 17. Gain-based importance (cross-check for SHAP).*
+
+![Figure 18 — Non-compliance ROC](../notebooks/figures/18_noncompliance_roc.png)
+
+*Figure 18. OOF ROC for predicting Qualified/Adverse vs Clean (AUROC ≈ 0.51).*
+
+**Findings.** Post-audit outcomes are hard to predict pre-filing — use outcomes for **continuous learning**, not primary queue ranking.
+
+### 5.10 Comparison to example credit-scoring benchmarks
 
 | Study | Domain | Best model | AUROC |
 |-------|--------|------------|-------|
@@ -583,15 +745,15 @@ The prototype confirms four hypotheses: (H1) engineered tax-gap features outperf
 
 *Caution:* TaxGuard uses a structured research dataset; German Credit is UCI real data. Metrics are **not directly comparable** across domains—but methodology (10-fold/5-fold CV, AUROC, KS) is aligned.
 
-### 5.4 Why unsupervised layers remain in the stack
+### 5.11 Why unsupervised layers remain in the stack
 
 Isolation Forest and autoencoder alone underperform (AUC 0.32, 0.42) but add **orthogonal errors** to boosting; the meta-learner weights them without in-sample leakage. Primary signal remains **supervised** tax-gap features.
 
-### 5.5 Calibration and operational thresholding
+### 5.12 Calibration and operational thresholding
 
 The calibration curve (Figure 13) and Brier score **0.0244** indicate that **p_hat** is usable as a proportional weight when planning audit hours—e.g. expecting roughly 78% positive rate among cases scoring 0.80 if the curve is near-diagonal in that band. The F1-optimal threshold **τ* = 0.7811** is a research default; ZIMRA may lower τ* to increase recall (more audits) or raise τ* to protect compliant firms, trading off precision per examiner hour. SHAP waterfalls (Figure 16) should accompany any adverse action to meet transparency expectations under national AI ethics frameworks [4].
 
-### 5.6 Limitations and external validity
+### 5.13 Limitations and external validity
 
 Results are obtained on **1,900 structured prototype records**, not live ZIMRA operational data. AUROC near 0.99 may moderate when label noise, concept drift, and missing external data are introduced. Sector and VAT features in the abstract are not yet in the feature matrix. Legal defensibility requires human sign-off on audits regardless of model output. Finally, phone contact details in the author block are for correspondence on this demonstration only and should follow institutional data-protection policies in any public document version.
 
