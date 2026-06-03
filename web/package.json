@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node ./node_modules/typescript/lib/tsc.js -b && vite build",
+    "typecheck": "node ./node_modules/typescript/lib/tsc.js -b",
     "preview": "vite preview"
   },
   "dependencies": {
