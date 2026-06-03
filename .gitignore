@@ -7,3 +7,9 @@ outputs/models/
 .DS_Store
 web/node_modules/
 web/dist/
+
+# Example reference papers (local copies only; methodology is in docs/*.md)
+docs/Credit*.pdf
+docs/Optimisation*.pdf
+docs/_methodology_build.html
+docs/_test.*

@@ -26,6 +26,10 @@ This repository contains the research prototype: exploratory analysis, feature e
 
 📄 **[Full Research Summary Report](TAXGUARD_RESEARCH_SUMMARY.md)** — Complete findings, graphs, ZIMRA policy implications, and national development alignment.
 
+📐 **[Technical Methodology Paper](docs/TaxGuard_Corporate_Tax_Risk_Scoring_Methodology.md)** — ML formulation, algorithms, and metrics (Markdown).
+
+📄 **[Methodology PDF](docs/TaxGuard_Corporate_Tax_Risk_Scoring_Methodology.pdf)** — Print-ready version with typeset equations (`python scripts/build_methodology_pdf.py`).
+
 ### Web Demo
 
 Interactive product demonstration built with React + TypeScript:
