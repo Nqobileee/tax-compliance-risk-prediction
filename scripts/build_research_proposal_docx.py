@@ -19,6 +19,19 @@ MIN_WORDS = 4000
 MAX_WORDS = 6000
 
 
+def sanitize(text: str) -> str:
+    """Normalise punctuation: no em dashes; en dashes become hyphens in ranges."""
+    if not text:
+        return text
+    text = re.sub(r"(\d)\u2013(\d)", r"\1-\2", text)
+    text = re.sub(r"(\d)\u2014(\d)", r"\1-\2", text)
+    text = text.replace("\u2014", ", ")
+    text = text.replace("\u2013", "-")
+    text = re.sub(r"\s+,", ",", text)
+    text = re.sub(r",\s{2,}", ", ", text)
+    return text
+
+
 def set_run_font(run, name: str = "Times New Roman", size: int = 12, bold: bool = False, italic: bool = False):
     run.font.name = name
     run.font.size = Pt(size)
@@ -28,6 +41,7 @@ def set_run_font(run, name: str = "Times New Roman", size: int = 12, bold: bool 
 
 
 def add_centered(doc: Document, text: str, size: int = 12, bold: bool = False, space_after: int = 6):
+    text = sanitize(text)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_after = Pt(space_after)
@@ -37,6 +51,7 @@ def add_centered(doc: Document, text: str, size: int = 12, bold: bool = False, s
 
 
 def add_body(doc: Document, text: str, first_line_indent: float = 0.5):
+    text = sanitize(text)
     p = doc.add_paragraph()
     p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
     p.paragraph_format.line_spacing = 1.15
@@ -48,6 +63,7 @@ def add_body(doc: Document, text: str, first_line_indent: float = 0.5):
 
 
 def add_heading_section(doc: Document, text: str):
+    text = sanitize(text)
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(6)
@@ -57,6 +73,7 @@ def add_heading_section(doc: Document, text: str):
 
 
 def add_subheading(doc: Document, text: str):
+    text = sanitize(text)
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(8)
     p.paragraph_format.space_after = Pt(4)
@@ -66,6 +83,7 @@ def add_subheading(doc: Document, text: str):
 
 
 def add_figure(doc: Document, image_path: Path, caption: str, width: float = 5.8):
+    caption = sanitize(caption)
     if image_path.exists():
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -79,11 +97,162 @@ def add_figure(doc: Document, image_path: Path, caption: str, width: float = 5.8
 
 
 def add_table_caption(doc: Document, caption: str):
+    caption = sanitize(caption)
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(8)
     p.paragraph_format.space_after = Pt(4)
     run = p.add_run(caption)
     set_run_font(run, bold=True, size=11)
+
+
+def add_equation(doc: Document, equation: str, label: str | None = None):
+    """Centred display equation (plain-text notation for Word compatibility)."""
+    equation = sanitize(equation)
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(4)
+    p.paragraph_format.space_after = Pt(4)
+    run = p.add_run(equation)
+    set_run_font(run, size=11, italic=True)
+    if label:
+        run2 = p.add_run(f"    ({label})")
+        set_run_font(run2, size=11, italic=False)
+
+
+def add_math_section(doc: Document, metrics: dict, n_records: int, auc_ens: float, pr_auc: float, brier: float, f1: float, tau: float, auc_base: float) -> None:
+    """Section 3.4: notation, feature map, loss functions, and evaluation metrics."""
+    gini = 2 * auc_ens - 1
+    chi2 = metrics["chi_square"]["statistic"]
+    chi2_p = metrics["chi_square"]["p_value"]
+
+    add_subheading(doc, "3.4 Mathematical formulation and scoring equations")
+    add_body(
+        doc,
+        "This section states the TaxGuard scoring problem in explicit notation, following the equation style "
+        "used in Zimbabwean credit-scoring research (Nyoni and Matshisela, 2018; Nyathi et al., 2014). Let "
+        f"N = {n_records} denote the number of corporate filings. Each filing i has engineered feature vector "
+        "x_i in R^d after the deterministic map phi(r_i) applied to raw return attributes r_i. The primary label "
+        "is binary High risk; the secondary label flags non-compliant audit outcomes for continuous learning.",
+    )
+
+    add_table_caption(doc, "Table 6. Mathematical notation.")
+    t6 = doc.add_table(rows=10, cols=2)
+    t6.style = "Table Grid"
+    t6.rows[0].cells[0].text = "Symbol"
+    t6.rows[0].cells[1].text = "Description"
+    notation = [
+        ("N", f"Number of corporate filings (N = {n_records})"),
+        ("x_i", "Engineered feature vector for filing i"),
+        ("y_i", "Primary label: 1 if Tax_Risk_Label_i = High, else 0"),
+        ("y_i^(nc)", "Secondary label: 1 if Audit_Outcome in {Qualified, Adverse}"),
+        ("p_hat_i", "Calibrated TaxGuard risk score in (0, 1)"),
+        ("z_i", "Stack of OOF base scores (Isolation Forest, Autoencoder, HGB)"),
+        ("sigma(.)", "Logistic sigmoid function"),
+        ("K", "Stratified cross-validation folds (K = 5)"),
+        ("tau*", f"F1-optimal operating threshold (tau* = {tau:.4f})"),
+    ]
+    for i, (sym, desc) in enumerate(notation, start=1):
+        t6.rows[i].cells[0].text = sym
+        t6.rows[i].cells[1].text = desc
+
+    add_body(doc, "Problem formulation. The learning dataset is D = {(x_i, y_i, y_i^(nc))}_{i=1}^N. Primary and secondary targets are:")
+    add_equation(doc, "y_i = 1[Tax_Risk_Label_i = High]", "1")
+    add_equation(doc, "y_i^(nc) = 1[Audit_Outcome_i in {Qualified, Adverse}]", "2")
+    add_body(
+        doc,
+        f"Empirical prevalence is y-bar = (1/N) sum_i y_i = 0.3337 and y-bar^(nc) = 0.3058. The objective is to "
+        "learn f: R^d -> (0, 1) that ranks filings for audit queue management while producing interpretable SHAP "
+        "attributions (Lundberg and Lee, 2017).",
+    )
+
+    add_subheading(doc, "3.4.1 Feature engineering map phi(.)")
+    add_body(
+        doc,
+        "Raw attributes include revenue R_i, profit P_i, statutory rate STR_i, effective rate ETR_i, offshore "
+        "transactions O_i^off, subsidiary count n_i^off, planning score pi_i, control score c_i, and fine history F_i. "
+        "Stabilised denominators R_i* = max(R_i, 10^-6) and S_i* = max(STR_i, 1) prevent division by zero.",
+    )
+    add_equation(doc, "Profit_Margin_i = P_i / R_i*", "3")
+    add_equation(doc, "Offshore_Intensity_i = O_i^off / R_i*", "4")
+    add_equation(doc, "Tax_Gap_i = P_i * (STR_i/100) * (1 - ETR_i/STR_i)", "5")
+    add_equation(
+        doc,
+        "Underpay_Ratio_i = (L_i^exp - L_i^impl) / max(L_i^exp, 10^-6),  where  L_i^impl = P_i*(ETR_i/100),  L_i^exp = P_i*(STR_i/100)",
+        "6",
+    )
+    add_equation(doc, "Control_Risk_i = 6 - c_i,    Fine_Intensity_i = F_i / R_i*", "7")
+    add_equation(doc, "psi_1,i = pi_i * DEV_i    (planning x deviation interaction)", "8")
+    add_body(
+        doc,
+        "Policy cohort masks M_i in {0, 1} support composite uplift analysis. For mask M, high-risk rate rho_M and "
+        "uplift relative to baseline y-bar are:",
+    )
+    add_equation(doc, "rho_M = (sum_{i: M_i=1} y_i) / (sum_i M_i)", "9")
+    add_equation(doc, "Uplift_M = rho_M / y-bar", "10")
+
+    add_subheading(doc, "3.4.2 Binary cross-entropy and logistic stacking")
+    add_body(
+        doc,
+        "The level-2 meta-learner is logistic regression on OOF stack z_i = (a_i^IF, a_i^AE, p_i^HGB)^T. "
+        "Given label y_i and prediction p_i, binary cross-entropy (negative log-likelihood) is:",
+    )
+    add_equation(doc, "L_BCE = -(1/N) sum_{i=1}^N [ y_i log(p_i) + (1 - y_i) log(1 - p_i) ]", "11")
+    add_equation(doc, "p_hat_i = sigma(w^T z_i + b),    sigma(z) = 1 / (1 + exp(-z))", "12")
+    add_body(
+        doc,
+        "HistGradientBoosting updates an additive tree ensemble F_T(x) = F_{T-1}(x) + eta * h_t(x) with learning "
+        "rate eta = 0.05, depth limit 8, and L2 penalty lambda = 1. Out-of-fold protocol trains each base model on "
+        "D \\ F_k and predicts only on fold F_k, eliminating in-sample leakage (Kohavi, 1995).",
+    )
+
+    add_subheading(doc, "3.4.3 Discrimination, calibration, and independence tests")
+    add_body(doc, "At threshold t, true positive rate and false positive rate define the ROC curve:")
+    add_equation(doc, "TPR(t) = TP / (TP + FN),    FPR(t) = FP / (FP + TN)", "13")
+    add_equation(doc, "AUROC(z) = integral_0^1 TPR(FPR^{-1}(u)) du", "14")
+    add_body(doc, "Calibration and operational metrics used in this study are:")
+    add_equation(doc, "Brier(p_hat, y) = (1/N) sum_i (y_i - p_hat_i)^2", "15")
+    add_equation(doc, "F_1(tau) = 2 * Precision(tau) * Recall(tau) / (Precision(tau) + Recall(tau))", "16")
+    add_equation(doc, "Gini = 2 * AUROC - 1", "17")
+    add_body(
+        doc,
+        "For contingency table O_rc (risk tier r, audit outcome c) with expected counts E_rc under independence, "
+        "the chi-square statistic is:",
+    )
+    add_equation(doc, "chi^2 = sum_{r,c} (O_rc - E_rc)^2 / E_rc,    df = (R - 1)(C - 1)", "18")
+    add_body(
+        doc,
+        f"In this prototype, chi^2 = {chi2:.2f}, df = 4, p = {chi2_p:.3f}. The hard classifier at deployment is "
+        "y_hat_i = 1[p_hat_i >= tau*].",
+    )
+    add_equation(doc, "y_hat_i = 1[p_hat_i >= tau*]", "19")
+
+    add_table_caption(doc, "Table 7. Calculated evaluation metrics (out-of-fold).")
+    t7 = doc.add_table(rows=8, cols=3)
+    t7.style = "Table Grid"
+    t7.rows[0].cells[0].text = "Metric"
+    t7.rows[0].cells[1].text = "Formula (Eq.)"
+    t7.rows[0].cells[2].text = "TaxGuard value"
+    metric_rows = [
+        ("AUROC(p_hat, y)", "14", f"{auc_ens:.4f}"),
+        ("PR-AUC", "integral of precision-recall", f"{pr_auc:.4f}"),
+        ("Brier score", "15", f"{brier:.4f}"),
+        ("F1 at tau*", "16", f"{f1:.4f}"),
+        ("tau* (F1-optimal)", "19", f"{tau:.4f}"),
+        ("Gini coefficient", "17", f"{gini:.4f}"),
+        ("Baseline AUROC (Audit_Likelihood)", "14", f"{auc_base:.4f}"),
+    ]
+    for i, row in enumerate(metric_rows, start=1):
+        for j, val in enumerate(row):
+            t7.rows[i].cells[j].text = val
+
+    add_body(
+        doc,
+        "SHAP values phi_ij satisfy the efficiency constraint f(x_i) = E[f(X)] + sum_j phi_ij, decomposing each "
+        "ensemble score into feature-level contributions for auditor review. Worked example: for a flagged filing "
+        "with STR = 20%, ETR approx 7.69%, and DEV approx 12.31 percentage points, ETR/STR approx 0.38, indicating "
+        "large statutory-effective separation on substantial profit.",
+    )
+    add_equation(doc, "f(x_i) = E[f(X)] + sum_{j=1}^{d} phi_ij", "20")
 
 
 def count_words(doc: Document) -> int:
@@ -127,7 +296,7 @@ def build_document(metrics: dict) -> Document:
     f1 = metrics["model_oof"]["ensemble_f1_optimal"]
     n_records = metrics["dataset"]["records"]
 
-    abstract = (
+    abstract = sanitize(
         "Abstract. Corporate tax non-compliance poses a significant threat to Zimbabwe\u2019s fiscal sustainability. "
         "However, the Zimbabwe Revenue Authority (ZIMRA) currently relies heavily on manual audit selection processes "
         "that are resource-intensive, inconsistent, and unable to scale with the growing volume and complexity of "
@@ -267,8 +436,8 @@ def build_document(metrics: dict) -> Document:
     hdr[0].text = "Key term"
     hdr[1].text = "Definition"
     for i, (term, definition) in enumerate(defs, start=1):
-        t1.rows[i].cells[0].text = term
-        t1.rows[i].cells[1].text = definition
+        t1.rows[i].cells[0].text = sanitize(term)
+        t1.rows[i].cells[1].text = sanitize(definition)
 
     add_body(
         doc,
@@ -404,6 +573,9 @@ def build_document(metrics: dict) -> Document:
         "Replication requires Python 3.11+, requirements.txt dependencies, and execution of "
         "scripts/generate_report_assets.py prior to notebook review.",
     )
+
+    tau = metrics["model_oof"]["optimal_threshold"]
+    add_math_section(doc, metrics, n_records, auc_ens, pr_auc, brier, f1, tau, auc_base)
 
     add_figure(
         doc,
@@ -691,7 +863,7 @@ def build_document(metrics: dict) -> Document:
         p.paragraph_format.left_indent = Inches(0.25)
         p.paragraph_format.first_line_indent = Inches(-0.25)
         p.paragraph_format.space_after = Pt(4)
-        run = p.add_run(ref)
+        run = p.add_run(sanitize(ref))
         set_run_font(run, size=11)
 
     add_heading_section(doc, "7 Acknowledgements")
@@ -718,7 +890,7 @@ def main() -> int:
 
     if word_count < MIN_WORDS or word_count > MAX_WORDS:
         print(
-            f"Warning: word count {word_count} outside target {MIN_WORDS}\u2013{MAX_WORDS}. "
+            f"Warning: word count {word_count} outside target {MIN_WORDS}-{MAX_WORDS}. "
             "Adjust prose in build_research_proposal_docx.py if required.",
             file=sys.stderr,
         )
