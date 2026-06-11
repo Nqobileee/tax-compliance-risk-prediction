@@ -6,7 +6,7 @@
 
 **Category:** Prototype Demonstration
 
-**Authors:** Edith Muyambiri 078685719 & Andile Bhebhe 0777303324
+**Authors:** Edith Muyambiri  & Andile Bhebhe 
 
 **Institution context:** Zimbabwe Revenue Authority (ZIMRA)
 
